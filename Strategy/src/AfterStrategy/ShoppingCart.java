@@ -1,5 +1,5 @@
-package AfterStrategy;
 
+package AfterStrategy;
 class ShoppingCart {
     public IPaymentStrategy paymentStrategy;
     private PaymentNotifier paymentNotifier;
@@ -16,12 +16,11 @@ class ShoppingCart {
 
     public void checkout(int amount) {
         if (paymentStrategy == null) {
-            paymentNotifier.notifyAll("No payment strategy set.");
+            paymentNotifier.notifyAll("Error: no payment strategy selected");
             return;
         }
+        paymentNotifier.notifyAll("Transition: PENDING -> processing");
         state.handlePayment(this);
-        // In this simple flow, processPayment triggers the strategy and notifier.
-        // State transitions can be handled inside processPayment or based on results.
     }
 
     public void setState(IPaymentState state) {
@@ -30,17 +29,21 @@ class ShoppingCart {
 
     public void processPayment() {
         try {
-            // Example: fixed amount; real flow would pass actual total
-            paymentStrategy.pay(100);
-            paymentNotifier.notifyAll("Payment completed successfully.");
+            paymentNotifier.notifyAll("Processing payment...");
+            paymentStrategy.pay(workingAmount);
+            paymentNotifier.notifyAll("Transition: processing -> COMPLETED");
             setState(new CompletedState());
-        } catch (Exception e) {
-            paymentNotifier.notifyAll("Payment failed: " + e.getMessage());
+            paymentNotifier.notifyAll("Payment completed successfully");
+        } catch (RuntimeException ex) {
+            paymentNotifier.notifyAll("Transition: processing -> FAILED");
             setState(new FailedState());
+            paymentNotifier.notifyAll("Payment failed: " + ex.getMessage());
         }
     }
 
-    // Helper accessors for state objects to reach notifier if needed
+    // injected by Main to carry the user-entered amount during the flow
+    int workingAmount = 0;
+
     public PaymentNotifier getPaymentNotifier() {
         return paymentNotifier;
     }
